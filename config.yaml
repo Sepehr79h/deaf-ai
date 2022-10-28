@@ -1,0 +1,4 @@
+num_epochs: 100
+network_name: "BaselineModel"
+total_trials: 1
+optimizer: "Adam"
