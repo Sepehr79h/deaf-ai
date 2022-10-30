@@ -3,6 +3,8 @@ import torch.nn
 
 from dataset import *
 from models import *
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class TrainingPipeline:
@@ -114,3 +116,30 @@ class TrainingPipeline:
 
         return (train_loss / (len(self.train_loader) + 1), 100. * correct / total,
                 val_loss, val_accuracy)
+    
+    def plot_accuracy(self, epochs, train_accuracy, validation_accuracy=None, test_accuracy=None, test_epochs=None):
+        if type(epochs == int):
+            epochs = np.arange(0, epochs, 1)
+        plt.plot(epochs, train_accuracy, label="train accuracy")
+        if type(validation_accuracy) != None:
+            plt.plot(epochs, validation_accuracy, label="validation accuracy")
+
+        plt.ylabel('Accuracy (%)')
+        plt.title('Accuracy over epochs')
+        plt.legend()
+        plt.show()
+
+        plt.close()
+
+        if type(test_accuracy) == None or type(test_epochs) == None:
+            print("skipping test plotting because either test accuarcy or test epochs is None")
+            return
+
+        if type(test_epochs == int):
+            test_epochs = np.arange(0, test_epochs, 1)
+        plt.plot(test_epochs, test_accuracy, label="test accuracy")
+
+        plt.ylabel('Accuracy (%)')
+        plt.title('Accuracy over epochs (Test)')
+        plt.legend()
+        plt.show()
