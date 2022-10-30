@@ -3,6 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#data
+raw_videos/
+raw_videos_mp4/
+prep_data.zip
+prep_data/
 # C extensions
 *.so
 
