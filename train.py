@@ -1,5 +1,6 @@
 import time
 import torch.nn
+from tqdm import tqdm
 
 from dataset import *
 from models import *
@@ -22,14 +23,15 @@ class TrainingPipeline:
 
     def initialize(self):
         optimizer_dict = {"Adam": torch.optim.Adam, "SGD": torch.optim.SGD}
-        self.optimizer = optimizer_dict.get(self.config_dict["optimizer"])
-        if self.optimizer is None:
-            raise AssertionError(f'Optimizer must be one of the following: {list(optimizer_dict.keys())}')
         self.data_creator = DataCreator(self.config_dict)
         self.train_loader, self.val_loader, self.test_loader = self.data_creator.create_loaders()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.loss = torch.nn.BCELoss()
         self.model = NetworkRetriever.get_network(self.config_dict["network_name"])
+        self.optimizer = optimizer_dict.get(self.config_dict["optimizer"])
+        if self.optimizer is None:
+            raise AssertionError(f'Optimizer must be one of the following: {list(optimizer_dict.keys())}')
+        self.optimizer = self.optimizer(self.model.parameters())
 
     def run_trials(self):
         self.results = {}
@@ -38,7 +40,7 @@ class TrainingPipeline:
             print("-------------------")
             print(f"Best train accuracy for Trial {trial} is {max(self.results[trial]['train_acc'])}")
             print(f"Best val accuracy for Trial {trial} is {max(self.results[trial]['val_acc'])}")
-            print(f"Final test accuracy for Trial {trial} is {self.results[trial]['test_acc']}")
+            #print(f"Final test accuracy for Trial {trial} is {self.results[trial]['test_acc']}")
             print("-------------------")
 
     def train(self, trial):
@@ -68,9 +70,9 @@ class TrainingPipeline:
             results_dict["val_loss"].append(round(val_loss, 4))
             results_dict["train_acc"].append(round(train_accuracy, 4))
             results_dict["val_acc"].append(round(val_accuracy, 4))
-        test_loss, test_accuracy = self.evaluate(self.val_loader, self.device)
-        results_dict["test_loss"] = test_loss
-        results_dict["test_acc"] = test_accuracy
+        # test_loss, test_accuracy = self.evaluate(self.val_loader, self.device)
+        # results_dict["test_loss"] = test_loss
+        # results_dict["test_acc"] = test_accuracy
         return results_dict
 
     def evaluate(self, eval_loader, device):
@@ -81,17 +83,19 @@ class TrainingPipeline:
         with torch.no_grad():
             for batch_idx, (inputs, targets) in enumerate(eval_loader):
                 inputs, targets = inputs.to(device), targets.to(device)
-                outputs = self.model(inputs)
-                loss = self.loss(outputs, targets)
+                outputs = self.model(inputs.float())
+                loss = self.loss(outputs, targets.unsqueeze(1).float())
 
                 eval_loss += loss.item()
-                _, predicted = outputs.max(1)
+                # _, predicted = outputs.max(1)
+                predicted = torch.where(outputs > 0.5, 1, 0).squeeze()
+                correct += np.where(targets == predicted, 1, 0).sum()
                 total += targets.size(0)
-                correct += predicted.eq(targets).sum().item()
         acc = 100. * correct / total
         return eval_loss / (batch_idx + 1), acc
 
     def epoch_iteration(self):
+        # breakpoint()
         self.model.train()
         train_loss = 0
         correct = 0
@@ -99,16 +103,15 @@ class TrainingPipeline:
         for batch_idx, (inputs, targets) in enumerate(self.train_loader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
-            outputs = self.model(inputs)
-            loss = self.loss(outputs, targets)
+            outputs = self.model(inputs.float())
+            loss = self.loss(outputs, targets.unsqueeze(1).float())
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
-
             train_loss += loss.item()
-            _, predicted = outputs.max(1)
+            predicted = torch.where(outputs > 0.5, 1, 0).squeeze()
+            correct += np.where(targets==predicted, 1, 0).sum()
             total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
 
         val_loss, val_accuracy = self.evaluate(self.val_loader, self.device)
 

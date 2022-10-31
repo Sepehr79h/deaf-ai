@@ -1,4 +1,6 @@
 num_epochs: 100
-network_name: "BaselineModel"
+network_name: "MobileNet"
 total_trials: 1
 optimizer: "Adam"
+batch_size: 64
+override_x_y: True
