@@ -1,5 +1,5 @@
-num_epochs: 100
-network_name: "MobileNet"
+num_epochs: 10
+network_name: "PoseLSTM"
 total_trials: 1
 optimizer: "Adam"
 batch_size: 64

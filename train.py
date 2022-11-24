@@ -23,7 +23,7 @@ class TrainingPipeline:
 
     def initialize(self):
         optimizer_dict = {"Adam": torch.optim.Adam, "SGD": torch.optim.SGD}
-        self.data_creator = DataCreator(self.config_dict)
+        self.data_creator = PoseDatasetCreator(self.config_dict)
         self.train_loader, self.val_loader, self.test_loader = self.data_creator.create_loaders()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.loss = torch.nn.BCELoss()
