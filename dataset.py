@@ -1,6 +1,13 @@
 import numpy as np
 import argparse
 from tqdm import tqdm
+import json
+import torch
+import torch.nn as nn
+from math import floor
+from torch.utils.data import Dataset, DataLoader
+from helpers import *
+import os, cv2 as cv
 
 class PoseDatasetCreator:
     def __init__(self, config_dict):
@@ -18,11 +25,13 @@ class PoseDatasetCreator:
         nosign_dir = os.path.join(self.siw_loc, "nosign_clips")
         for dir in [nosign_dir, sign_dir]:
             np_array = None
-            for sign in tqdm(os.listdir(dir)[:50]):
+            for sign in tqdm(os.listdir(dir)):
                 file_path = os.path.join(dir, sign)
                 points = PoseDatasetCreator.generate_pose_data(file_path)
+                empty_entry = np.zeros((1, 100, 38))
+                empty_entry[0, 0:points.shape[0]] = points.copy()[0:min(100, len(points))]
                 if isinstance(points, np.ndarray) and points.shape[0]!=0:
-                    np_array = points if np_array is None else np.concatenate((np_array, points), axis=0)
+                    np_array = empty_entry if np_array is None else np.concatenate((np_array, empty_entry), axis=0)
             np.save(f"{dir.split('/')[-1]}.npy", np_array)
 
     def create_points_array_wlasl(self):
@@ -46,8 +55,8 @@ class PoseDatasetCreator:
                 #         self.pose_array = np.concatenate((self.pose_array, all_points), axis=0)
                 if isinstance(all_points, np.ndarray) and all_points.shape[0]!=0:
                     sign_points = all_points[inst['frame_start'] - 1:inst['frame_end']]
-                    empty_entry = np.zeros((1, 100, 38))
-                    #breakpoint()
+                    empty_entry = np.zeros((100, 38))
+                    breakpoint()
                     empty_entry[0, 0:sign_points.shape[0]] = sign_points.copy()[0:min(100, len(sign_points))]
                     # expanded = np.expand_dims(empty_entry, axis=0)
                     if self.sign_pose_array_created is False:
@@ -122,8 +131,8 @@ class PoseDatasetCreator:
                     x = (frame_width * point[0]) / out.shape[3]
                     y = (frame_height * point[1]) / out.shape[2]
                     # Add a point if it's confidence is higher than threshold.
-                    points.append(int(x))
-                    points.append(int(y))
+                    points.append(float(x))
+                    points.append(float(y))
                 all_points.append(points)
 
             all_points = np.array(all_points)
@@ -144,9 +153,11 @@ class PoseDatasetCreator:
         # no_sign = np.load("no_sign_array.npy", allow_pickle=True)
         sign = np.load("sign_clips.npy", allow_pickle=True)
         no_sign = np.load("nosign_clips.npy", allow_pickle=True)
-
         X = np.concatenate((sign, no_sign), axis=0)
+        X = (X - X.mean())/X.std()
+        np.save("dataset_mean_and_std.npy", [X.mean(), X.std()])
         y = np.array([1] * sign.shape[0] + [0] * no_sign.shape[0])
+
 
         print(X.shape, y.shape)
         self.X = X
@@ -208,7 +219,7 @@ class LargeLoaderDS(Dataset):
         self.max = xarray.shape[0]
 
     def __getitem__(self, item):
-        data = self.xarray[item,:,:,:].values
+        data = self.xarray[item,:,:]#.values
         labels = self.labels[item]
         return data, labels
 
