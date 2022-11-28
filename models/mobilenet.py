@@ -27,6 +27,7 @@ class Block(nn.Module):
         self.conv2 = nn.Conv3d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm3d(out_planes)
 
+
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = F.relu(self.bn2(self.conv2(out)))
@@ -34,7 +35,7 @@ class Block(nn.Module):
 
 
 class MobileNet(nn.Module):
-    def __init__(self, num_classes=600, sample_size=224, width_mult=1.):
+    def __init__(self, num_classes=1, sample_size=224, width_mult=1.):
         super(MobileNet, self).__init__()
 
         input_channel = 32
@@ -50,7 +51,7 @@ class MobileNet(nn.Module):
             [1024, 2, (1, 1, 1)],
         ]
 
-        self.features = [conv_bn(3, input_channel, (1, 2, 2))]
+        self.features = [conv_bn(1, input_channel, (1, 2, 2))]
         # building inverted residual blocks
         for c, n, s in cfg:
             output_channel = int(c * width_mult)
@@ -65,9 +66,11 @@ class MobileNet(nn.Module):
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(last_channel, num_classes),
+            nn.Sigmoid()
         )
 
     def forward(self, x):
+        x = x.unsqueeze(1)
         x = self.features(x)
         x = F.avg_pool3d(x, x.data.size()[-3:])
         x = x.view(x.size(0), -1)

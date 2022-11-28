@@ -1,4 +1,7 @@
-num_epochs: 100
-network_name: "BaselineModel"
+num_epochs: 50
+network_name: "PoseLSTM"
 total_trials: 1
 optimizer: "Adam"
+batch_size: 64
+override_x_y: True
+learning_rate: 0.00001
