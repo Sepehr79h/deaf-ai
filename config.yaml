@@ -4,4 +4,4 @@ total_trials: 1
 optimizer: "Adam"
 batch_size: 64
 override_x_y: True
-learning_rate: 0.0001
+learning_rate: 0.00001
