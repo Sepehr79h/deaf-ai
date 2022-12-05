@@ -2,6 +2,7 @@ from helpers import ConfigLoader
 from train import TrainingPipeline
 
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 
 def save_results(config_dict, pipeline, results_dict):
@@ -9,7 +10,7 @@ def save_results(config_dict, pipeline, results_dict):
     root = "results/"
 
     train_loss = np.array(results_dict["train_loss"])
-    np.save(f"{root}{model_name}_train_loss.npy", train_loss)
+    np.save (f"{root}{model_name}_train_loss.npy", train_loss)
     
     val_loss = np.array(results_dict["val_loss"])
     np.save(f"{root}{model_name}_val_loss.npy", val_loss)
@@ -23,10 +24,17 @@ def save_results(config_dict, pipeline, results_dict):
     epoch_num = np.array(results_dict["epoch_num"])
     np.save(f"{root}{model_name}_epoch_num.npy", epoch_num)
 
+    with open(f"results/{model_name}.pt", 'wb') as f:
+            torch.save(pipeline.model, f)
+
     
 
 def create_plots(config_dict):
     model_name = config_dict['network_name']
+
+    with open(f"results/{model_name}.pt", 'rb') as f:
+        model = torch.load(f)
+
     root = "results/"
     epochs = np.load(f"{root}{model_name}_epoch_num.npy")
     train_loss = np.load(f"{root}{model_name}_train_loss.npy")
@@ -38,6 +46,7 @@ def create_plots(config_dict):
     plt.plot(epochs, train_acc, label="train accuracy")
     plt.plot(epochs, val_acc, label="val accuracy")
 
+    plt.xlabel('Epochs')
     plt.ylabel('Accuracy (%)')
     plt.title('Accuracy over epochs')
     plt.legend()
@@ -48,13 +57,17 @@ def create_plots(config_dict):
     # plot loss 
     plt.plot(epochs, train_loss, label="train loss")
     plt.plot(epochs, val_loss, label="val loss")
+
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss (BCE)')
+    plt.title('Loss over epochs')
     plt.legend()
     plt.savefig(f"{root}/loss_{model_name}.png")
     
 
 if __name__ == "__main__":
     config_dict = ConfigLoader.setup_config("config.yaml")
-    create_plots(config_dict)
+    # create_plotås(config_dict)
     pipeline = TrainingPipeline(config_dict)
     pipeline.initialize()
     pipeline.run_trials()
