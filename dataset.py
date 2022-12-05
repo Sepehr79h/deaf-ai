@@ -25,7 +25,7 @@ class PoseDatasetCreator:
         nosign_dir = os.path.join(self.siw_loc, "nosign_clips")
         for dir in [nosign_dir, sign_dir]:
             np_array = None
-            for sign in tqdm(os.listdir(dir)):
+            for sign in tqdm(os.listdir(dir))[:2]:
                 file_path = os.path.join(dir, sign)
                 points = PoseDatasetCreator.generate_pose_data(file_path)
                 empty_entry = np.zeros((1, 100, 38))
@@ -154,6 +154,7 @@ class PoseDatasetCreator:
         sign = np.load("sign_clips.npy", allow_pickle=True)
         no_sign = np.load("nosign_clips.npy", allow_pickle=True)
         X = np.concatenate((sign, no_sign), axis=0)
+        breakpoint()
         X = (X - X.mean())/X.std()
         np.save("dataset_mean_and_std.npy", [X.mean(), X.std()])
         y = np.array([1] * sign.shape[0] + [0] * no_sign.shape[0])
@@ -241,4 +242,4 @@ class LargeLoaderDS(Dataset):
 if __name__ == "__main__":
     config_dict = ConfigLoader.setup_config("config.yaml")
     pose_dataset_creator = PoseDatasetCreator(config_dict)
-    pose_dataset_creator.create_points_array_wild()
+    pose_dataset_creator.create_array_wild

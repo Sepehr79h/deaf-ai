@@ -1,4 +1,4 @@
-num_epochs: 50
+num_epochs: 30
 network_name: "PoseLSTM"
 total_trials: 1
 optimizer: "Adam"

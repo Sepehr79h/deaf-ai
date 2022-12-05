@@ -18,8 +18,6 @@ class PlotCreator:
         plt.ylabel(plot_dict["ylabel"])
         plt.legend()
         plt.savefig(f"{plot_dict['title']}.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
-
-        breakpoint()
         plt.clf()
 
     def generate_plots(self):
