@@ -67,7 +67,7 @@ def create_plots(config_dict):
 
 if __name__ == "__main__":
     config_dict = ConfigLoader.setup_config("config.yaml")
-    # create_plotås(config_dict)
+    # create_plots(config_dict)
     pipeline = TrainingPipeline(config_dict)
     pipeline.initialize()
     pipeline.run_trials()

@@ -1,5 +1,5 @@
 num_epochs: 50
-network_name: "BaselineModel" 
+network_name: "MobileNet"
 # network_name: "PoseLSTM"
 total_trials: 1
 optimizer: "Adam"

@@ -10,7 +10,7 @@ class BaselineModel(nn.Module):
         self.pool = nn.MaxPool3d(2, stride=2)
         self.conv2 = nn.Conv3d(16, 16, 3, stride=2, padding=2)
         self.conv3 = nn.Conv3d(16, 16, kernel_size=3)
-        self.lstm_1 = nn.LSTM(input_size=42, hidden_size=128, bidirectional=False, batch_first=True)
+        self.lstm_1 = nn.LSTM(input_size=30, hidden_size=128, bidirectional=False, batch_first=True)
         self.lstm_2 = nn.LSTM(input_size=128, hidden_size=64, bidirectional=False, batch_first=True)
         self.lstm_3 = nn.LSTM(input_size=64, hidden_size=64, bidirectional=False, batch_first=True)
         self.relu = nn.ReLU()

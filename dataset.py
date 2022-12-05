@@ -8,6 +8,10 @@ from math import floor
 from torch.utils.data import Dataset, DataLoader
 from helpers import *
 import os, cv2 as cv
+import skvideo.io
+from abc import ABCMeta, abstractmethod
+import dask.array as da
+
 
 class PoseDatasetCreator:
     def __init__(self, config_dict):
@@ -30,7 +34,7 @@ class PoseDatasetCreator:
                 points = PoseDatasetCreator.generate_pose_data(file_path)
                 empty_entry = np.zeros((1, 100, 38))
                 empty_entry[0, 0:points.shape[0]] = points.copy()[0:min(100, len(points))]
-                if isinstance(points, np.ndarray) and points.shape[0]!=0:
+                if isinstance(points, np.ndarray) and points.shape[0] != 0:
                     np_array = empty_entry if np_array is None else np.concatenate((np_array, empty_entry), axis=0)
             np.save(f"{dir.split('/')[-1]}.npy", np_array)
 
@@ -53,7 +57,7 @@ class PoseDatasetCreator:
                 #         self.pose_array = np.expand_dims(all_points, axis=0)
                 #     else:
                 #         self.pose_array = np.concatenate((self.pose_array, all_points), axis=0)
-                if isinstance(all_points, np.ndarray) and all_points.shape[0]!=0:
+                if isinstance(all_points, np.ndarray) and all_points.shape[0] != 0:
                     sign_points = all_points[inst['frame_start'] - 1:inst['frame_end']]
                     empty_entry = np.zeros((100, 38))
                     breakpoint()
@@ -72,7 +76,8 @@ class PoseDatasetCreator:
                         elif vid['frame_end'] != -1:
                             no_sign_points = all_points[vid['frame_end'] - 1:-1]
                         empty_entry = np.zeros((1, 100, 38))
-                        empty_entry[0, 0:no_sign_points.shape[0]] = no_sign_points.copy()[0:min(100, len(no_sign_points))]
+                        empty_entry[0, 0:no_sign_points.shape[0]] = no_sign_points.copy()[
+                                                                    0:min(100, len(no_sign_points))]
                         if self.no_sign_pose_array_created is False:
                             self.no_sign_pose_array = empty_entry
                             self.no_sign_pose_array_created = True
@@ -80,13 +85,13 @@ class PoseDatasetCreator:
                         else:
                             self.no_sign_pose_array = np.concatenate((self.no_sign_pose_array, empty_entry), axis=0)
 
-                counter+=1
+                counter += 1
                 sign_print_val = self.sign_pose_array.shape if self.sign_pose_array_created is True else None
                 no_sign_print_val = self.no_sign_pose_array.shape if self.no_sign_pose_array_created is True else None
-                if counter%10==0:
-                    print(counter, time.time() - start, (time.time() - start)/counter)
+                if counter % 10 == 0:
+                    print(counter, time.time() - start, (time.time() - start) / counter)
                     print(f"Sign Array: {sign_print_val}, No Sign Array: {no_sign_print_val}")
-                if self.sign_pose_array is not None and self.sign_pose_array.shape[0]>=10:
+                if self.sign_pose_array is not None and self.sign_pose_array.shape[0] >= 10:
                     np.save('sign_array.npy', self.sign_pose_array[:6])
                     np.save('no_sign_array.npy', self.sign_pose_array[6:])
                     print(self.sign_pose_array[:6].shape)
@@ -94,7 +99,6 @@ class PoseDatasetCreator:
         np.save('sign_array.npy', self.sign_pose_array)
         np.save('no_sign_array.npy', self.no_sign_pose_array)
         breakpoint()
-
 
     # create numpy array of wlasl vids that is of shape (num_frames, 38)
     @staticmethod
@@ -154,10 +158,9 @@ class PoseDatasetCreator:
         sign = np.load("sign_clips.npy", allow_pickle=True)
         no_sign = np.load("nosign_clips.npy", allow_pickle=True)
         X = np.concatenate((sign, no_sign), axis=0)
-        X = (X - X.mean())/X.std()
+        X = (X - X.mean()) / X.std()
         np.save("dataset_mean_and_std.npy", [X.mean(), X.std()])
         y = np.array([1] * sign.shape[0] + [0] * no_sign.shape[0])
-
 
         print(X.shape, y.shape)
         self.X = X
@@ -184,50 +187,63 @@ class DataCreator:
     def __init__(self, config_dict):
         self.config_dict = config_dict
 
-    def create_loaders(self):
+    def create_x_y(self):
+        dataset = None
+        sign_dir = os.path.join(self.siw_loc, "sign_clips")
+        nosign_dir = os.path.join(self.siw_loc, "nosign_clips")
+        for dir in [nosign_dir, sign_dir]:
+            np_array = None
+            for sign in tqdm(os.listdir(dir)):
+                file_path = os.path.join(dir, sign)
+                points = skvideo.io.vread(file_path)
+                empty_entry = np.zeros((1, 100, 240, 426, 3))
+                empty_entry[0, 0:points.shape[0]] = points.copy()[0:min(100, len(points))]
+                if isinstance(points, np.ndarray) and points.shape[0] != 0:
+                    np_array = empty_entry if np_array is None else np.concatenate((np_array, empty_entry), axis=0)
+            np.save(f"{dir.split('/')[-1]}.npy", np_array)
 
+
+    def create_loaders(self):
         # tensor_x = torch.from_numpy(self.X) # transform to torch tensor
         # tensor_y = torch.from_numpy(self.y)
+        self.create_x_y()
 
-        my_dataset = LargeLoaderDS(self.X,self.y) # create your datset
+        my_dataset = NoPoseLoaderDS(self.X, self.y)  # create your datset
 
-        train_set,test_set, val_set = torch.utils.data.random_split(my_dataset, [floor(self.y.shape[0]*.7), 
-            floor(self.y.shape[0]*.2),self.y.shape[0]-floor(self.y.shape[0]*.7)-floor(self.y.shape[0]*.2)])
-        
+        train_set, test_set, val_set = torch.utils.data.random_split(my_dataset, [floor(self.y.shape[0] * .7),
+                                                                                  floor(self.y.shape[0] * .2),
+                                                                                  self.y.shape[0] - floor(
+                                                                                      self.y.shape[0] * .7) - floor(
+                                                                                      self.y.shape[0] * .2)])
         train_loader = DataLoader(train_set)
         val_loader = DataLoader(val_set)
         test_loader = DataLoader(test_set)
         return train_loader, val_loader, test_loader
-    
+
     def create_x_y(self, location='prep_data/'):
-        sign = da.from_npy_stack('prep_data/sign_npy/')
-        no_sign = da.from_npy_stack('prep_data/no_sign_npy/')
+        sign = da.from_npy_stack('/home/ubuntu/siw_data/npy_data/sign_clips')
+        no_sign = da.from_npy_stack('/home/ubuntu/siw_data/npy_data/nosign_clips')
+        X = da.concatenate((sign, no_sign), axis=0)
 
-        X = da.concatenate((sign,no_sign),axis=0)
-
-        y = np.array([1]*sign.shape[0] + [0]*no_sign.shape[0])
+        y = np.array([1] * sign.shape[0] + [0] * no_sign.shape[0])
 
         self.X = X
         self.y = y
-        return X,y
+        return X, y
 
-class LargeLoaderDS(Dataset):
+
+class ParentLoader(Dataset):
     def __init__(self, xarray, labels):
         self.xarray = xarray
         self.labels = labels
         self.count = 0
         self.max = xarray.shape[0]
 
-    def __getitem__(self, item):
-        data = self.xarray[item,:,:]#.values
-        labels = self.labels[item]
-        return data, labels
-
     def __len__(self):
         return self.xarray.shape[0]
 
     def __iter__(self):
-        self.count=0
+        self.count = 0
         return self
 
     def __next__(self):
@@ -238,7 +254,32 @@ class LargeLoaderDS(Dataset):
         else:
             raise StopIteration
 
+    @abstractmethod
+    def __getitem__(self, item):
+        pass
+
+
+class LargeLoaderDS(ParentLoader):
+    def __init__(self, xarray, labels):
+        super().__init__(xarray, labels)
+
+    def __getitem__(self, item):
+        data = self.xarray[item, :, :]
+        labels = self.labels[item]
+        return data, labels
+
+
+class NoPoseLoaderDS(ParentLoader):
+    def __init__(self, xarray, labels):
+        super().__init__(xarray, labels)
+
+    def __getitem__(self, item):
+        data = np.array(self.xarray[item, :, :, :])
+        labels = self.labels[item]
+        return data, labels
+
+
 if __name__ == "__main__":
     config_dict = ConfigLoader.setup_config("config.yaml")
-    pose_dataset_creator = PoseDatasetCreator(config_dict)
-    pose_dataset_creator.create_points_array_wild()
+    pose_dataset_creator = DataCreator(config_dict)
+    pose_dataset_creator.create_loaders()
