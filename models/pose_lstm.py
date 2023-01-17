@@ -1,15 +1,14 @@
-# import PyTorch
 import torch
 import torch.nn as nn
 
 class PoseLSTM(nn.Module):
     def __init__(self):
         super(PoseLSTM, self).__init__()
-        self.lstm1 = nn.LSTM(input_size=38, hidden_size=1024, bidirectional=False, batch_first=True)
-        self.lstm2 = nn.LSTM(input_size=1024, hidden_size=512, bidirectional=False, batch_first=True)
-        self.lstm3 = nn.LSTM(input_size=512, hidden_size=256, bidirectional=False, batch_first=True)
-        self.linear1 = nn.Linear(256, 128)
-        self.linear2 = nn.Linear(128, 64)
+        self.lstm1 = nn.LSTM(input_size=38, hidden_size=256, bidirectional=False, batch_first=True)
+        self.lstm2 = nn.LSTM(input_size=256, hidden_size=128, bidirectional=False, batch_first=True)
+        self.lstm3 = nn.LSTM(input_size=128, hidden_size=96, bidirectional=False, batch_first=True)
+        self.linear1 = nn.Linear(96, 96)
+        self.linear2 = nn.Linear(96, 64)
         self.linear3 = nn.Linear(64, 1)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
@@ -26,7 +25,3 @@ class PoseLSTM(nn.Module):
         output = self.relu(self.linear2(output))
         output = self.sigmoid(self.linear3(output)).squeeze(0)
         return output
-
-
-
-

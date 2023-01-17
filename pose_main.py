@@ -7,6 +7,8 @@ if __name__ == "__main__":
     pipeline = TrainingPipeline(config_dict)
     pipeline.initialize()
     pipeline.run_trials()
-    plot_creator = PlotCreator(config_dict, pipeline.results_dict)
+    print("~~~ Generating Plots ~~~")
+    plot_creator = PlotCreator(config_dict, pipeline.results)
     plot_creator.generate_plots()
-    plot_creator.create_confusion_matrix()
+
+

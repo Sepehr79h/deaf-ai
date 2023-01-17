@@ -1,6 +1,7 @@
-num_epochs: 10
+num_epochs: 30
 network_name: "PoseLSTM"
 total_trials: 1
 optimizer: "Adam"
 batch_size: 64
 override_x_y: True
+learning_rate: 0.001
