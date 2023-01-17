@@ -10,4 +10,3 @@ if __name__ == "__main__":
     plot_creator = PlotCreator(config_dict, pipeline.results_dict)
     plot_creator.generate_plots()
     plot_creator.create_confusion_matrix()
-
