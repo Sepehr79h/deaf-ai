@@ -5,6 +5,8 @@ import sys
 import urllib.request
 from multiprocessing.dummy import Pool
 
+from pytube import YouTube
+
 import random
 
 import logging
@@ -37,9 +39,26 @@ def save_video(data, saveto):
     # please be nice to the host - take pauses and avoid spamming
     time.sleep(random.uniform(0.5, 1.5))
 
-
+#used for downloading non-sign videos user curated
 def download_youtube(url, dirname, video_id):
-    raise NotImplementedError("Urllib cannot deal with YouTube links.")
+    try: 
+    # object creation using YouTube
+    # which was imported in the beginning 
+        yt = YouTube(url) 
+    except: 
+        print("Video not Found") #to handle exception 
+    
+    # filters out all the files with "mp4" extension 
+    mp4files = yt.streams.filter(file_extension='mp4',res="240p") 
+
+    # get the video with the extension and
+    # resolution passed in the get() function 
+
+    try: 
+        # downloading the video 
+        mp4files.first().download(dirname,filename=url.split("=")[1]+'.mp4')
+    except: 
+        print("Some Error!") 
 
 
 def download_aslpro(url, dirname, video_id):
